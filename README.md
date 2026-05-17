@@ -57,7 +57,7 @@ workstation/         # Files that live on the laptop/desktop
   unraid-dash.sh       # bash function — sourced from ~/.bashrc
   tower-dashboard      # launcher script — symlinked into ~/.local/bin
   tower-dashboard.svg  # icon — symlinked into ~/.local/share/icons/.../apps/
-  Tower Dashboard.desktop  # XDG launcher entry
+  Tower Dashboard.desktop.in  # XDG launcher entry template (Exec=@BIN_PATH@)
   ssh-config.snippet   # ControlMaster block template to append to ~/.ssh/config
 tower/               # Files that live on the Unraid host
   bin/                 # fan-status, array-status — into /boot/config/bin/
@@ -77,10 +77,12 @@ git clone https://github.com/BrettKinny/tower-dashboard ~/Repos/tower-dashboard
 ~/Repos/tower-dashboard/install-workstation.sh
 ```
 
-The installer is idempotent (safe to re-run): it symlinks the launcher,
-`.desktop` entry, and icon into the right XDG dirs, appends a source line for
-the `unraid-dash` bash function to `~/.bashrc`, and refreshes the desktop
-database so launchers pick up the new entry.
+The installer is idempotent (safe to re-run): it symlinks the launcher script
+and icon into the right XDG dirs, renders the `.desktop` entry from its
+template with an absolute `Exec=` path (some launchers — notably walker on
+omarchy — don't resolve `~/.local/bin` from unqualified Exec lines), appends
+a source line for the `unraid-dash` bash function to `~/.bashrc`, and
+refreshes the desktop database so launchers pick up the new entry.
 
 Then follow the printed steps: append the SSH `ControlMaster` snippet,
 optionally export the env vars below, and install the tower side.

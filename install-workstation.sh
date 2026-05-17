@@ -1,22 +1,31 @@
 #!/bin/bash
 # Idempotent installer for the workstation side of Tower Dashboard.
 # - Symlinks the launcher into ~/.local/bin
-# - Symlinks the .desktop entry into ~/.local/share/applications
+# - Renders the .desktop entry (template → absolute Exec path) into ~/.local/share/applications
 # - Symlinks the SVG icon into ~/.local/share/icons/hicolor/scalable/apps
 # - Ensures the unraid-dash function is sourced from ~/.bashrc
 # - Refreshes the XDG desktop database so launchers pick up the new entry
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
+BIN_PATH="$HOME/.local/bin/tower-dashboard"
+DESKTOP_PATH="$HOME/.local/share/applications/Tower Dashboard.desktop"
 
 mkdir -p "$HOME/.local/bin" \
          "$HOME/.local/share/applications" \
          "$HOME/.local/share/icons/hicolor/scalable/apps"
 
-ln -sfv "$REPO/workstation/tower-dashboard"        "$HOME/.local/bin/tower-dashboard"
-ln -sfv "$REPO/workstation/Tower Dashboard.desktop" "$HOME/.local/share/applications/Tower Dashboard.desktop"
+ln -sfv "$REPO/workstation/tower-dashboard"        "$BIN_PATH"
 ln -sfv "$REPO/workstation/tower-dashboard.svg"    "$HOME/.local/share/icons/hicolor/scalable/apps/tower-dashboard.svg"
 chmod +x "$REPO/workstation/tower-dashboard"
+
+# Render the .desktop from its template with an absolute Exec path. Symlinking
+# the template directly would leave Exec=tower-dashboard unqualified, which
+# some launchers (notably walker on omarchy) won't resolve even when
+# ~/.local/bin is in the systemd-user PATH — they raise "Command not found".
+# Writing a real local file with an absolute path is deterministic.
+sed "s|@BIN_PATH@|$BIN_PATH|g" "$REPO/workstation/Tower Dashboard.desktop.in" > "$DESKTOP_PATH"
+echo "Rendered $DESKTOP_PATH (Exec=$BIN_PATH)"
 
 SOURCE_LINE="[ -f \"$REPO/workstation/unraid-dash.sh\" ] && source \"$REPO/workstation/unraid-dash.sh\""
 if ! grep -Fqs "$REPO/workstation/unraid-dash.sh" "$HOME/.bashrc"; then

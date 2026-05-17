@@ -9,6 +9,8 @@ and a custom `fan-status` strip composed in a single tmux window over SSH,
 launchable from any XDG app launcher. One click, one keystroke, one window —
 everything you need to glance at to know the box is healthy.
 
+![Tower Dashboard screenshot](https://github.com/user-attachments/assets/f715879b-fd18-4847-b6df-f2c1da0fc7c2)
+
 > **Built for Unraid.** The tower-side pieces are Unraid-coupled (`mdcmd`,
 > `/mnt/disk*` / `/mnt/cache` / `/mnt/user`, RAM-FS restored from
 > `/boot/config/go`). The workstation-side launcher will happily SSH into any

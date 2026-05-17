@@ -8,10 +8,11 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
 
-mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications"
+mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications" "$HOME/.local/share/icons/hicolor/scalable/apps"
 
 ln -sfv "$REPO/workstation/tower-dashboard"        "$HOME/.local/bin/tower-dashboard"
 ln -sfv "$REPO/workstation/Tower Dashboard.desktop" "$HOME/.local/share/applications/Tower Dashboard.desktop"
+ln -sfv "$REPO/workstation/tower-dashboard.svg"    "$HOME/.local/share/icons/hicolor/scalable/apps/tower-dashboard.svg"
 chmod +x "$REPO/workstation/tower-dashboard"
 
 SOURCE_LINE="[ -f \"$REPO/workstation/unraid-dash.sh\" ] && source \"$REPO/workstation/unraid-dash.sh\""

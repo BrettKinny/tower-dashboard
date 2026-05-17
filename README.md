@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="workstation/tower-dashboard.svg" alt="Tower Dashboard icon" width="128" height="128">
+</p>
+
 # Tower Dashboard
 
 Live, read-only monitoring dashboard for my Unraid tower (`root@tower.local`),

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect x="16" y="6" width="32" height="52" rx="2.5"
+        fill="#0e1530" stroke="#ffcead" stroke-width="1.5"/>
+
+  <g stroke="#a3bfd1" stroke-width="0.8" stroke-linecap="round">
+    <line x1="20" y1="10" x2="44" y2="10"/>
+    <line x1="20" y1="12" x2="44" y2="12"/>
+    <line x1="20" y1="14" x2="44" y2="14"/>
+  </g>
+
+  <rect x="20" y="20" width="24" height="14" rx="1"
+        fill="#060B1E" stroke="#a3bfd1" stroke-width="0.8"/>
+
+  <polyline points="22,30 25,28 28,29 31,25 34,27 37,23 40,26 42,22"
+            stroke="#92a593" stroke-width="1" fill="none"
+            stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="22,32 25,31 28,30 31,28 34,30 37,29 40,27 42,28"
+            stroke="#E9BB4F" stroke-width="0.7" fill="none" opacity="0.75"
+            stroke-linejoin="round" stroke-linecap="round"/>
+
+  <g stroke="#6d7db6" stroke-width="0.6">
+    <line x1="20" y1="40" x2="44" y2="40"/>
+    <line x1="20" y1="42" x2="44" y2="42"/>
+    <line x1="20" y1="44" x2="44" y2="44"/>
+  </g>
+
+  <circle cx="24" cy="52" r="2.5" stroke="#c89dc1" stroke-width="1" fill="none"/>
+  <circle cx="24" cy="52" r="1" fill="#c89dc1"/>
+
+  <circle cx="32" cy="52" r="1.2" fill="#92a593"/>
+
+  <circle cx="38" cy="52" r="1.2" fill="#E9BB4F"/>
+
+  <rect x="14" y="58" width="36" height="2" rx="1" fill="#6d7db6"/>
+</svg>

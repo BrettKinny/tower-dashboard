@@ -14,6 +14,12 @@ everything you need to glance at to know the box is healthy.
 > `/boot/config/go`). The workstation-side launcher will happily SSH into any
 > Linux host, but the array-status and boot-restore bits assume Unraid.
 
+> **Shared as a starting point, not a finished product.** Fork it, rip out
+> what doesn't match your box, rewire the rest. The generalizable bits — the
+> tmux composition pattern, the hwmon-via-sysfs fan reader, the
+> FAT32-survives-boot install dance via `/boot/config/go` — are the parts
+> worth lifting even if your stack looks nothing like mine.
+
 ## Layout
 
 Three rows, all running on the Unraid host over SSH:

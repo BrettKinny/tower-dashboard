@@ -2,12 +2,17 @@
   <img src="workstation/tower-dashboard.svg" alt="Tower Dashboard icon" width="128" height="128">
 </p>
 
-# Tower Dashboard
+# Tower Dashboard — a TUI for Unraid
 
-A live, read-only monitoring dashboard for your Unraid tower, rendered as a
-single tmux window over SSH and launchable from any XDG app launcher as
-**"Tower Dashboard"**. One click, one keystroke, one window — everything you
-need to glance at to know the box is healthy.
+A live, read-only monitoring dashboard for **Unraid**: `btop`, `nvtop`, `ctop`,
+and a custom `fan-status` strip composed in a single tmux window over SSH,
+launchable from any XDG app launcher. One click, one keystroke, one window —
+everything you need to glance at to know the box is healthy.
+
+> **Built for Unraid.** The tower-side pieces are Unraid-coupled (`mdcmd`,
+> `/mnt/disk*` / `/mnt/cache` / `/mnt/user`, RAM-FS restored from
+> `/boot/config/go`). The workstation-side launcher will happily SSH into any
+> Linux host, but the array-status and boot-restore bits assume Unraid.
 
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fan PWM/RPM + CPU pkg temp — surfaces what btop's tiny corner readouts hide
-# Hardware mapping per /home/brett/Notes/Unraid Tower.md:
+# Hardware mapping (verify with `sensors` / `ls /sys/class/hwmon/` on your host):
 #   pwm1/fan1 = CHA_FAN1 = 3x intakes (Y-splitter, only master reports tach)
 #   pwm3/fan3 = CHA_FAN2 = 2x exhausts (PST-chained)
 #   hwmon1 = coretemp; hwmon2 = NCT6779

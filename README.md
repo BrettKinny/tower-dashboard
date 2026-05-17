@@ -10,6 +10,7 @@ launchable from any XDG app launcher. One click, one keystroke, one window —
 everything you need to glance at to know the box is healthy.
 
 ![Tower Dashboard screenshot](https://github.com/user-attachments/assets/f715879b-fd18-4847-b6df-f2c1da0fc7c2)
+<sub>Running in `foot` on [omarchy](https://omarchy.org) with the etherial theme.</sub>
 
 > **Built for Unraid.** The tower-side pieces are Unraid-coupled (`mdcmd`,
 > `/mnt/disk*` / `/mnt/cache` / `/mnt/user`, RAM-FS restored from

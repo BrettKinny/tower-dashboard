@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Tower Dashboard
+GenericName=Unraid System Monitor
+Comment=Live monitoring dashboard for the Unraid tower (btop, nvtop, ctop, fan-status)
+Icon=tower-dashboard
+Exec=/home/brett/.local/bin/tower-dashboard
+Terminal=false
+Categories=System;Monitor;
+Keywords=tower;unraid;monitor;dashboard;tmux;dash

@@ -1,0 +1,47 @@
+#!/bin/bash
+# Launch the unraid-dash tmux dashboard in a fresh terminal window.
+# Idempotent: refreshes the unraid window in the Work session, or creates the session if absent.
+#
+# CRITICAL ordering: we must spawn the terminal (so it attaches and resizes the
+# session to its real dimensions) BEFORE running unraid-dash. If the layout is
+# built while the session is still at the detached default 80x24, every pane
+# size scales proportionally on attach -- turning a 1-row fans split into a
+# 12-row chunk. Hence the poll-then-send-keys dance below.
+set -e
+
+SESSION=Work
+WINDOW=unraid
+
+# Ensure the Work session exists.
+if ! tmux has-session -t "$SESSION" 2>/dev/null; then
+  tmux new-session -d -s "$SESSION" -n "$WINDOW"
+fi
+
+# Tmux destroys a session when its last window is killed. If $WINDOW is the
+# only window left in $SESSION (which happens after the user closes the
+# dashboard terminal), kill-window would kill the session and the rest of the
+# script silently fails. Stash a __init placeholder window first so the session
+# always retains at least one window during the kill-and-recreate dance.
+if ! tmux list-windows -t "$SESSION" -F '#W' | grep -qvx "$WINDOW"; then
+  tmux new-window -d -t "${SESSION}:" -n __init
+fi
+
+tmux kill-window -t "${SESSION}:${WINDOW}" 2>/dev/null || true
+tmux new-window -d -t "${SESSION}:" -n "$WINDOW"
+tmux kill-window -t "${SESSION}:__init" 2>/dev/null || true
+
+tmux select-window -t "${SESSION}:${WINDOW}"
+
+# Spawn terminal in the background so we can wait for it to attach + resize.
+# -d kicks any stale client off so the window adopts the new terminal's size.
+xdg-terminal-exec -- tmux attach -d -t "${SESSION}:${WINDOW}" &
+
+# Poll until the window has resized away from the detached default (80 wide).
+# Cap at ~2.5s so we always send the command even if something goes sideways.
+for _ in {1..50}; do
+  width=$(tmux display -t "${SESSION}:${WINDOW}" -p '#{window_width}' 2>/dev/null || echo 0)
+  [[ "$width" -gt 80 ]] && break
+  sleep 0.05
+done
+
+tmux send-keys -t "${SESSION}:${WINDOW}" 'unraid-dash' Enter

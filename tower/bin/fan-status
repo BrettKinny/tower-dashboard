@@ -1,0 +1,23 @@
+#!/bin/bash
+# Fan PWM/RPM + CPU pkg temp — surfaces what btop's tiny corner readouts hide
+# Hardware mapping per /home/brett/Notes/Unraid Tower.md:
+#   pwm1/fan1 = CHA_FAN1 = 3x intakes (Y-splitter, only master reports tach)
+#   pwm3/fan3 = CHA_FAN2 = 2x exhausts (PST-chained)
+#   hwmon1 = coretemp; hwmon2 = NCT6779
+# Pass --line for a single-line fan-only summary (used by the unraid-dash bottom strip).
+read pwm1 < /sys/class/hwmon/hwmon2/pwm1
+read rpm1 < /sys/class/hwmon/hwmon2/fan1_input
+read pwm3 < /sys/class/hwmon/hwmon2/pwm3
+read rpm3 < /sys/class/hwmon/hwmon2/fan3_input
+read tpkg < /sys/class/hwmon/hwmon1/temp1_input
+
+if [[ "$1" == "--line" ]]; then
+  printf "FANS  intakes %d%% RPM=%d  |  exhausts %d%% RPM=%d\n" \
+    "$((pwm1*100/255))" "$rpm1" "$((pwm3*100/255))" "$rpm3"
+  exit 0
+fi
+
+printf "FANS  (FanCtrlPlus floors: in=90, out=75)\n"
+printf "  intakes   pwm=%-3d (%2d%%)  RPM=%4d\n" "$pwm1" "$((pwm1*100/255))" "$rpm1"
+printf "  exhausts  pwm=%-3d (%2d%%)  RPM=%4d\n" "$pwm3" "$((pwm3*100/255))" "$rpm3"
+printf "\nCPU pkg:    %d C\n" "$((tpkg/1000))"

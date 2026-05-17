@@ -1,0 +1,7 @@
+# Append to ~/.ssh/config on the workstation.
+# Without ControlMaster, every dashboard launch handshakes 4× and feels slow.
+# With it, the first SSH opens a multiplexed socket and the other three ride it.
+Host tower.local 192.168.1.67
+    ControlMaster auto
+    ControlPath ~/.ssh/cm-%r@%h:%p
+    ControlPersist 10m

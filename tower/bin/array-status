@@ -1,0 +1,20 @@
+#!/bin/bash
+# One-line array summary + df for /mnt/* — used by unraid-dash array pane
+mdcmd status | awk -F= '
+  /^mdState=/{s=$2}
+  /^mdNumDisks=/{d=$2}
+  /^mdNumDisabled=/{ds=$2}
+  /^mdNumInvalid=/{iv=$2}
+  /^mdNumMissing=/{m=$2}
+  /^sbSyncErrs=/{e=$2}
+  /^mdResyncAction=/{a=$2}
+  /^mdResync=/{r=$2}
+  /^mdResyncPos=/{p=$2}
+  END {
+    printf "array %s  disks=%s  disabled=%s invalid=%s missing=%s  parity_errs=%s  ", s, d, ds, iv, m, e
+    if (r > 0) printf "RESYNC %s pos=%s\n", a, p
+    else       printf "resync=idle (%s)\n", a
+  }
+'
+echo
+df -h /mnt/disk* /mnt/cache /mnt/user 2>/dev/null | grep -v tmpfs

@@ -1,0 +1,3 @@
+[options]
+columns = "status,name,cpu,mem,net,io,pids,uptime"
+sortField = "cpu"

@@ -1,0 +1,27 @@
+# Append these lines to /boot/config/go on the Unraid host.
+# Unraid is RAM-based; almost everything outside /boot/ is rebuilt every boot,
+# and /boot/config/ is FAT32 (does NOT preserve unix exec bits — chmod +x required).
+
+# Load NCT6775 hwmon module so fan-status can read pwm/RPM from sysfs.
+modprobe nct6775
+
+# FanCtrlPlus sensor-ignore override (stops lm-sensors from re-reading fan tachs).
+cp -f /boot/config/sensors-ignore-fans.conf /etc/sensors.d/zz-ignore-fans.conf
+
+# tmux-256color terminfo so htop/nvtop/watch over SSH from tmux don't bail with
+# "ncurses: cannot initialize terminal type".
+mkdir -p /usr/share/terminfo/t && cp -f /boot/config/terminfo/t/tmux-256color /usr/share/terminfo/t/tmux-256color
+
+# Custom binaries + dashboard companion scripts.
+cp -f /boot/config/bin/btop /usr/local/bin/btop && chmod +x /usr/local/bin/btop
+cp -f /boot/config/bin/array-status /usr/local/bin/array-status && chmod +x /usr/local/bin/array-status
+cp -f /boot/config/bin/fan-status /usr/local/bin/fan-status && chmod +x /usr/local/bin/fan-status
+cp -f /boot/config/bin/ctop /usr/local/bin/ctop && chmod +x /usr/local/bin/ctop
+
+# Config files (no chmod needed).
+mkdir -p /root/.config/btop && cp -f /boot/config/btop/btop.conf /root/.config/btop/btop.conf
+mkdir -p /root/.config/ctop && cp -f /boot/config/ctop/config /root/.config/ctop/config
+mkdir -p /root/.config/nvtop && ln -sf /boot/config/plugins/nvtop/interface.ini /root/.config/nvtop/interface.ini
+
+# Restart FanCtrlPlus after a delay so it applies its profile post-boot.
+(sleep 30 && /usr/local/emhttp/plugins/fanctrlplus/scripts/rc.fanctrlplus restart) </dev/null >/dev/null 2>&1 &

@@ -1,23 +1,68 @@
 #!/bin/bash
-# Fan PWM/RPM + CPU pkg temp — surfaces what btop's tiny corner readouts hide
-# Hardware mapping (verify with `sensors` / `ls /sys/class/hwmon/` on your host):
-#   pwm1/fan1 = CHA_FAN1 = 3x intakes (Y-splitter, only master reports tach)
-#   pwm3/fan3 = CHA_FAN2 = 2x exhausts (PST-chained)
-#   hwmon1 = coretemp; hwmon2 = NCT6779
+# Fan PWM/RPM + CPU pkg temp summary — surfaces what btop's tiny corner readouts hide.
+#
 # Pass --line for a single-line fan-only summary (used by the unraid-dash bottom strip).
-read pwm1 < /sys/class/hwmon/hwmon2/pwm1
-read rpm1 < /sys/class/hwmon/hwmon2/fan1_input
-read pwm3 < /sys/class/hwmon/hwmon2/pwm3
-read rpm3 < /sys/class/hwmon/hwmon2/fan3_input
-read tpkg < /sys/class/hwmon/hwmon1/temp1_input
+# Pass --detect to enumerate all hwmon chips and their pwm/fan/temp inputs.
+#
+# CONFIGURE FOR YOUR HARDWARE
+# ===========================
+# Run `fan-status --detect` to list hwmon chips and their pwm/fan inputs, then
+# set the env vars below (or edit defaults) to match your wiring.
+#
+# Defaults match the original setup: Asus NCT6779 superio chip, 3x intakes on
+# CHA_FAN1 (Y-splitter, only master reports tach), 2x exhausts on CHA_FAN2
+# (PST-chained), Intel coretemp for CPU package.
 
-if [[ "$1" == "--line" ]]; then
-  printf "FANS  intakes %d%% RPM=%d  |  exhausts %d%% RPM=%d\n" \
-    "$((pwm1*100/255))" "$rpm1" "$((pwm3*100/255))" "$rpm3"
+# Chip names — looked up by reading /sys/class/hwmon/hwmonN/name. Prefix match.
+INTAKE_CHIP_NAME="${TOWER_INTAKE_CHIP:-nct6779}"
+EXHAUST_CHIP_NAME="${TOWER_EXHAUST_CHIP:-nct6779}"
+TEMP_CHIP_NAME="${TOWER_TEMP_CHIP:-coretemp}"
+
+# Which pwm/fan numbers within those chips (e.g. pwm1 + fan1_input => 1).
+INTAKE_NUM="${TOWER_INTAKE_NUM:-1}"
+EXHAUST_NUM="${TOWER_EXHAUST_NUM:-3}"
+TEMP_NUM="${TOWER_TEMP_NUM:-1}"
+
+find_chip() {
+  local want="$1" name d
+  for d in /sys/class/hwmon/hwmon*; do
+    [[ -r "$d/name" ]] || continue
+    read name < "$d/name"
+    [[ "$name" == "$want"* ]] && { echo "$d"; return 0; }
+  done
+  return 1
+}
+
+if [[ "$1" == "--detect" ]]; then
+  for d in /sys/class/hwmon/hwmon*; do
+    [[ -r "$d/name" ]] || continue
+    read chip_name < "$d/name"
+    printf "%s  (%s)\n" "$d" "$chip_name"
+    for f in "$d"/pwm[1-9] "$d"/fan[1-9]_input "$d"/temp[1-9]_input; do
+      [[ -e "$f" ]] && printf "  %-16s = %s\n" "$(basename "$f")" "$(cat "$f" 2>/dev/null)"
+    done
+    echo
+  done
   exit 0
 fi
 
-printf "FANS  (FanCtrlPlus floors: in=90, out=75)\n"
-printf "  intakes   pwm=%-3d (%2d%%)  RPM=%4d\n" "$pwm1" "$((pwm1*100/255))" "$rpm1"
-printf "  exhausts  pwm=%-3d (%2d%%)  RPM=%4d\n" "$pwm3" "$((pwm3*100/255))" "$rpm3"
+intake_chip=$(find_chip  "$INTAKE_CHIP_NAME")  || { echo "fan-status: no '$INTAKE_CHIP_NAME' hwmon chip found (run --detect)" >&2; exit 1; }
+exhaust_chip=$(find_chip "$EXHAUST_CHIP_NAME") || { echo "fan-status: no '$EXHAUST_CHIP_NAME' hwmon chip found (run --detect)" >&2; exit 1; }
+temp_chip=$(find_chip    "$TEMP_CHIP_NAME")    || { echo "fan-status: no '$TEMP_CHIP_NAME' hwmon chip found (run --detect)" >&2; exit 1; }
+
+read pwm_in  < "$intake_chip/pwm${INTAKE_NUM}"
+read rpm_in  < "$intake_chip/fan${INTAKE_NUM}_input"
+read pwm_out < "$exhaust_chip/pwm${EXHAUST_NUM}"
+read rpm_out < "$exhaust_chip/fan${EXHAUST_NUM}_input"
+read tpkg    < "$temp_chip/temp${TEMP_NUM}_input"
+
+if [[ "$1" == "--line" ]]; then
+  printf "FANS  intakes %d%% RPM=%d  |  exhausts %d%% RPM=%d\n" \
+    "$((pwm_in*100/255))" "$rpm_in" "$((pwm_out*100/255))" "$rpm_out"
+  exit 0
+fi
+
+printf "FANS\n"
+printf "  intakes   pwm=%-3d (%2d%%)  RPM=%4d\n" "$pwm_in"  "$((pwm_in*100/255))"  "$rpm_in"
+printf "  exhausts  pwm=%-3d (%2d%%)  RPM=%4d\n" "$pwm_out" "$((pwm_out*100/255))" "$rpm_out"
 printf "\nCPU pkg:    %d C\n" "$((tpkg/1000))"

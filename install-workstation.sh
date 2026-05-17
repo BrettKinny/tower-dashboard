@@ -2,13 +2,16 @@
 # Idempotent installer for the workstation side of Tower Dashboard.
 # - Symlinks the launcher into ~/.local/bin
 # - Symlinks the .desktop entry into ~/.local/share/applications
+# - Symlinks the SVG icon into ~/.local/share/icons/hicolor/scalable/apps
 # - Ensures the unraid-dash function is sourced from ~/.bashrc
-# - Prints follow-up steps for SSH ControlMaster + walker refresh
+# - Refreshes the XDG desktop database so launchers pick up the new entry
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
 
-mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications" "$HOME/.local/share/icons/hicolor/scalable/apps"
+mkdir -p "$HOME/.local/bin" \
+         "$HOME/.local/share/applications" \
+         "$HOME/.local/share/icons/hicolor/scalable/apps"
 
 ln -sfv "$REPO/workstation/tower-dashboard"        "$HOME/.local/bin/tower-dashboard"
 ln -sfv "$REPO/workstation/Tower Dashboard.desktop" "$HOME/.local/share/applications/Tower Dashboard.desktop"
@@ -27,13 +30,24 @@ else
   echo "unraid-dash already sourced from ~/.bashrc — skipping"
 fi
 
+# Refresh the XDG desktop database so launchers (walker, rofi, GNOME, KDE, …)
+# pick up the new "Tower Dashboard" entry without a logout.
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+  echo "Refreshed XDG desktop database"
+fi
+
 cat <<'EOF'
 
-Next steps (manual):
-  1. Append workstation/ssh-config.snippet to ~/.ssh/config (or set up your
-     own ControlMaster block for tower.local / 192.168.1.67).
-  2. Run `omarchy restart walker` (or your launcher's equivalent) so the
-     "Tower Dashboard" entry shows up.
-  3. Open a new shell (or `source ~/.bashrc`) to pick up unraid-dash.
-  4. See tower/README for the Unraid-side install.
+Next steps:
+  1. Append workstation/ssh-config.snippet to ~/.ssh/config and edit the host
+     line to point at your Unraid tower. SSH ControlMaster is a launch-speed
+     optimization, not strictly required.
+  2. Customize via env vars in your shell rc (all optional; defaults shown):
+       export TOWER_HOST=root@tower.local   # SSH target
+       export TOWER_SESSION=tower           # tmux session name
+       export TOWER_WINDOW=unraid           # tmux window name
+       export TERMINAL=ghostty              # override terminal autodetect
+  3. Install the tower-side companion scripts on Unraid — see tower/README.md.
+  4. Open a new shell (or `source ~/.bashrc`) to pick up unraid-dash.
 EOF

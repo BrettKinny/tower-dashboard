@@ -1,6 +1,12 @@
 #!/bin/bash
 # Launch the unraid-dash tmux dashboard in a fresh terminal window.
-# Idempotent: refreshes the unraid window in the Work session, or creates the session if absent.
+# Idempotent: refreshes the dashboard window in $TOWER_SESSION, or creates the session if absent.
+#
+# Configurable via environment:
+#   TOWER_HOST     — SSH target passed through to unraid-dash (default: root@tower.local)
+#   TOWER_SESSION  — tmux session name to host the window in     (default: tower)
+#   TOWER_WINDOW   — tmux window name within that session         (default: unraid)
+#   TERMINAL       — terminal emulator command to spawn           (default: autodetect)
 #
 # CRITICAL ordering: we must spawn the terminal (so it attaches and resizes the
 # session to its real dimensions) BEFORE running unraid-dash. If the layout is
@@ -9,10 +15,33 @@
 # 12-row chunk. Hence the poll-then-send-keys dance below.
 set -e
 
-SESSION=Work
-WINDOW=unraid
+SESSION="${TOWER_SESSION:-tower}"
+WINDOW="${TOWER_WINDOW:-unraid}"
+HOST_ARG="${TOWER_HOST:-}"
 
-# Ensure the Work session exists.
+# --- terminal dispatch ------------------------------------------------------
+# Try $TERMINAL first, then a list of known terminals with their per-app
+# invocation for "run this command in a new window". First one found wins.
+launch_terminal() {
+  local cmd=("$@") t
+  local candidates=("$TERMINAL" xdg-terminal-exec ghostty kitty alacritty foot wezterm gnome-terminal konsole xterm)
+  for t in "${candidates[@]}"; do
+    [[ -z "$t" ]] && continue
+    command -v "$t" >/dev/null 2>&1 || continue
+    case "$t" in
+      xdg-terminal-exec) "$t" -- "${cmd[@]}" & return 0 ;;
+      wezterm)           "$t" start -- "${cmd[@]}" & return 0 ;;
+      gnome-terminal)    "$t" -- "${cmd[@]}" & return 0 ;;
+      kitty|foot)        "$t" "${cmd[@]}" & return 0 ;;
+      *)                 "$t" -e "${cmd[@]}" & return 0 ;;  # ghostty, alacritty, konsole, xterm, and $TERMINAL
+    esac
+  done
+  echo "tower-dashboard: no terminal emulator found. Set \$TERMINAL or install one of: xdg-terminal-exec, ghostty, kitty, alacritty, foot, wezterm, gnome-terminal, konsole, xterm." >&2
+  exit 1
+}
+
+# --- tmux session/window prep ----------------------------------------------
+# Ensure the session exists.
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   tmux new-session -d -s "$SESSION" -n "$WINDOW"
 fi
@@ -32,9 +61,9 @@ tmux kill-window -t "${SESSION}:__init" 2>/dev/null || true
 
 tmux select-window -t "${SESSION}:${WINDOW}"
 
-# Spawn terminal in the background so we can wait for it to attach + resize.
-# -d kicks any stale client off so the window adopts the new terminal's size.
-xdg-terminal-exec -- tmux attach -d -t "${SESSION}:${WINDOW}" &
+# --- spawn terminal + poll for real geometry, then send the build command --
+# -d on attach kicks any stale client off so the window adopts our new size.
+launch_terminal tmux attach -d -t "${SESSION}:${WINDOW}"
 
 # Poll until the window has resized away from the detached default (80 wide).
 # Cap at ~2.5s so we always send the command even if something goes sideways.
@@ -44,4 +73,8 @@ for _ in {1..50}; do
   sleep 0.05
 done
 
-tmux send-keys -t "${SESSION}:${WINDOW}" 'unraid-dash' Enter
+if [[ -n "$HOST_ARG" ]]; then
+  tmux send-keys -t "${SESSION}:${WINDOW}" "unraid-dash ${HOST_ARG}" Enter
+else
+  tmux send-keys -t "${SESSION}:${WINDOW}" 'unraid-dash' Enter
+fi

@@ -8,7 +8,7 @@ Live, read-only monitoring dashboard for my Unraid tower (`root@tower.local`),
 rendered as a single tmux window over SSH. Launchable from any app launcher
 as **"Tower Dashboard"**.
 
-![Tower Dashboard screenshot](docs/screenshot.png)
+
 
 ## Layout
 
@@ -37,7 +37,6 @@ tower/               # Files that live on the Unraid host
   go.snippet           # boot-restore lines to append to /boot/config/go
   README.md            # Unraid-side install instructions
 install-workstation.sh # Idempotent installer for the workstation side
-docs/screenshot.png
 ```
 
 ## Install

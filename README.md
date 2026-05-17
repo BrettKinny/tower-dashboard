@@ -14,8 +14,6 @@ everything you need to glance at to know the box is healthy.
 > `/boot/config/go`). The workstation-side launcher will happily SSH into any
 > Linux host, but the array-status and boot-restore bits assume Unraid.
 
-
-
 ## Layout
 
 Three rows, all running on the Unraid host over SSH:

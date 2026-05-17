@@ -2,7 +2,7 @@
   <img src="workstation/tower-dashboard.svg" alt="Tower Dashboard icon" width="128" height="128">
 </p>
 
-# Tower Dashboard — a TUI for Unraid
+# Tower Dashboard: a TUI for monitoring your Unraid tower
 
 A live, read-only monitoring dashboard for **Unraid**: `btop`, `nvtop`, `ctop`,
 and a custom `fan-status` strip composed in a single tmux window over SSH,

@@ -15,7 +15,7 @@ unraid-dash() {
   local btop_pane="$TMUX_PANE"
   local nvtop_pane ctop_pane fans_pane
 
-  tmux rename-window -t "$btop_pane" "unraid"
+  tmux rename-window -t "$btop_pane" "${TOWER_WINDOW:-unraid}"
 
   # Three rows: btop (top ~60%), nvtop|ctop equal split (middle ~40%), fan-status (1-row strip, full width).
   nvtop_pane=$(tmux split-window -v -p 40 -t "$btop_pane" -P -F '#{pane_id}')

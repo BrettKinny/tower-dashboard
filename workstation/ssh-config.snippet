@@ -4,7 +4,7 @@
 # Without ControlMaster, every dashboard launch handshakes 4× and feels slow.
 # With it, the first SSH opens a multiplexed socket and the other three ride
 # it for 10 minutes.
-Host tower.local 192.168.1.67    # <-- change to your tower's hostname / IP
+Host tower.local 192.168.1.10    # <-- change to your tower's hostname / IP
     ControlMaster auto
     ControlPath ~/.ssh/cm-%r@%h:%p
     ControlPersist 10m

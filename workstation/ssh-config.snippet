@@ -1,10 +1,10 @@
 # Append to ~/.ssh/config on the workstation, replacing the host and IP with
-# your Unraid tower's hostname/IP.
+# your Unraid box's hostname/IP.
 #
-# Without ControlMaster, every dashboard launch handshakes 4× and feels slow.
-# With it, the first SSH opens a multiplexed socket and the other three ride
-# it for 10 minutes.
-Host tower.local 192.168.1.10    # <-- change to your tower's hostname / IP
+# The dashboard uses a single SSH connection (it attaches to a tmux session
+# that lives on the box), so ControlMaster is no longer required — but it's
+# harmless to keep and still speeds up any other SSH you do to the box.
+Host tower.local 192.168.1.10    # <-- change to your box's hostname / IP
     ControlMaster auto
     ControlPath ~/.ssh/cm-%r@%h:%p
     ControlPersist 10m

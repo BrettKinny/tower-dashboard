@@ -1,80 +1,41 @@
 #!/bin/bash
-# Launch the unraid-dash tmux dashboard in a fresh terminal window.
-# Idempotent: refreshes the dashboard window in $TOWER_SESSION, or creates the session if absent.
+# tower-dashboard — open the Unraid monitoring dashboard in a new terminal.
 #
-# Configurable via environment:
-#   TOWER_HOST     — SSH target passed through to unraid-dash (default: root@tower.local)
-#   TOWER_SESSION  — tmux session name to host the window in     (default: tower)
-#   TOWER_WINDOW   — tmux window name within that session         (default: unraid)
-#   TERMINAL       — terminal emulator command to spawn           (default: autodetect)
+# The dashboard itself — a tmux session ('dash') running btop / nvtop / ctop /
+# fan-status — lives server-side on the Unraid box (see tower/bin/tower-dash).
+# This script just spawns a terminal that SSHes in and attaches to it. The
+# session persists on the box between launches, so re-opening is instant.
 #
-# CRITICAL ordering: we must spawn the terminal (so it attaches and resizes the
-# session to its real dimensions) BEFORE running unraid-dash. If the layout is
-# built while the session is still at the detached default 80x24, every pane
-# size scales proportionally on attach -- turning a 1-row fans split into a
-# 12-row chunk. Hence the poll-then-send-keys dance below.
+# Environment:
+#   TOWER_HOST  — SSH target                  (default: root@tower.local)
+#   TERMINAL    — terminal emulator to spawn   (default: autodetected)
 set -e
 
-SESSION="${TOWER_SESSION:-tower}"
-WINDOW="${TOWER_WINDOW:-unraid}"
-HOST_ARG="${TOWER_HOST:-}"
+HOST="${TOWER_HOST:-root@tower.local}"
 
-# --- terminal dispatch ------------------------------------------------------
-# Try $TERMINAL first, then a list of known terminals with their per-app
-# invocation for "run this command in a new window". First one found wins.
-launch_terminal() {
-  local cmd=("$@") t
-  local candidates=("$TERMINAL" xdg-terminal-exec ghostty kitty alacritty foot wezterm gnome-terminal konsole xterm)
-  for t in "${candidates[@]}"; do
-    [[ -z "$t" ]] && continue
-    command -v "$t" >/dev/null 2>&1 || continue
-    case "$t" in
-      xdg-terminal-exec) "$t" -- "${cmd[@]}" & return 0 ;;
-      wezterm)           "$t" start -- "${cmd[@]}" & return 0 ;;
-      gnome-terminal)    "$t" -- "${cmd[@]}" & return 0 ;;
-      kitty|foot)        "$t" "${cmd[@]}" & return 0 ;;
-      *)                 "$t" -e "${cmd[@]}" & return 0 ;;  # ghostty, alacritty, konsole, xterm, and $TERMINAL
-    esac
-  done
-  echo "tower-dashboard: no terminal emulator found. Set \$TERMINAL or install one of: xdg-terminal-exec, ghostty, kitty, alacritty, foot, wezterm, gnome-terminal, konsole, xterm." >&2
-  exit 1
-}
+# TERM is pinned to a type the Unraid box is guaranteed to have terminfo for.
+# Its RAM-FS carries the base ncurses set plus a restored tmux-256color, but
+# not xterm-ghostty / xterm-kitty — passing the local TERM straight through
+# would leave tmux unable to initialise the outer terminal.
+REMOTE_CMD=(ssh -t "$HOST" 'TERM=xterm-256color exec tower-dash')
 
-# --- tmux session/window prep ----------------------------------------------
-# Ensure the session exists.
-if ! tmux has-session -t "$SESSION" 2>/dev/null; then
-  tmux new-session -d -s "$SESSION" -n "$WINDOW"
-fi
-
-# Tmux destroys a session when its last window is killed. If $WINDOW is the
-# only window left in $SESSION (which happens after the user closes the
-# dashboard terminal), kill-window would kill the session and the rest of the
-# script silently fails. Stash a __init placeholder window first so the session
-# always retains at least one window during the kill-and-recreate dance.
-if ! tmux list-windows -t "$SESSION" -F '#W' | grep -qvx "$WINDOW"; then
-  tmux new-window -d -t "${SESSION}:" -n __init
-fi
-
-tmux kill-window -t "${SESSION}:${WINDOW}" 2>/dev/null || true
-tmux new-window -d -t "${SESSION}:" -n "$WINDOW"
-tmux kill-window -t "${SESSION}:__init" 2>/dev/null || true
-
-tmux select-window -t "${SESSION}:${WINDOW}"
-
-# --- spawn terminal + poll for real geometry, then send the build command --
-# -d on attach kicks any stale client off so the window adopts our new size.
-launch_terminal tmux attach -d -t "${SESSION}:${WINDOW}"
-
-# Poll until the window has resized away from the detached default (80 wide).
-# Cap at ~2.5s so we always send the command even if something goes sideways.
-for _ in {1..50}; do
-  width=$(tmux display -t "${SESSION}:${WINDOW}" -p '#{window_width}' 2>/dev/null || echo 0)
-  [[ "$width" -gt 80 ]] && break
-  sleep 0.05
+# Spawn the SSH command in a fresh terminal window — fresh, so it is NOT inside
+# a local tmux (the only multiplexer in play is the one on the box). Try
+# $TERMINAL first, then known emulators, each with its own "run this command"
+# invocation. First one found wins; exec hands our process over to it.
+for term in "${TERMINAL:-}" xdg-terminal-exec ghostty kitty alacritty foot wezterm gnome-terminal konsole xterm; do
+  [ -z "$term" ] && continue
+  command -v "$term" >/dev/null 2>&1 || continue
+  case "$term" in
+    xdg-terminal-exec) exec "$term" -- "${REMOTE_CMD[@]}" ;;
+    wezterm)           exec "$term" start -- "${REMOTE_CMD[@]}" ;;
+    gnome-terminal)    exec "$term" -- "${REMOTE_CMD[@]}" ;;
+    kitty|foot)        exec "$term" "${REMOTE_CMD[@]}" ;;
+    *)                 exec "$term" -e "${REMOTE_CMD[@]}" ;;
+  esac
 done
 
-if [[ -n "$HOST_ARG" ]]; then
-  tmux send-keys -t "${SESSION}:${WINDOW}" "unraid-dash ${HOST_ARG}" Enter
-else
-  tmux send-keys -t "${SESSION}:${WINDOW}" 'unraid-dash' Enter
-fi
+echo "tower-dashboard: no terminal emulator found. Set \$TERMINAL or install" \
+     "one of: ghostty, kitty, alacritty, foot, wezterm, gnome-terminal," \
+     "konsole, xterm." >&2
+exit 1

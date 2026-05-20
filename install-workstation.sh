@@ -3,7 +3,7 @@
 # - Symlinks the launcher into ~/.local/bin
 # - Renders the .desktop entry (template → absolute Exec path) into ~/.local/share/applications
 # - Symlinks the SVG icon into ~/.local/share/icons/hicolor/scalable/apps
-# - Ensures the unraid-dash function is sourced from ~/.bashrc
+# - Adds an 'unraid-dash' convenience alias to ~/.bashrc
 # - Refreshes the XDG desktop database so launchers pick up the new entry
 set -euo pipefail
 
@@ -27,16 +27,16 @@ chmod +x "$REPO/workstation/tower-dashboard"
 sed "s|@BIN_PATH@|$BIN_PATH|g" "$REPO/workstation/Tower Dashboard.desktop.in" > "$DESKTOP_PATH"
 echo "Rendered $DESKTOP_PATH (Exec=$BIN_PATH)"
 
-SOURCE_LINE="[ -f \"$REPO/workstation/unraid-dash.sh\" ] && source \"$REPO/workstation/unraid-dash.sh\""
-if ! grep -Fqs "$REPO/workstation/unraid-dash.sh" "$HOME/.bashrc"; then
+# 'unraid-dash' is a convenience alias for the launcher — handy from a shell.
+if ! grep -Fqs "alias unraid-dash=" "$HOME/.bashrc"; then
   {
     echo ""
-    echo "# tower-dashboard: unraid-dash tmux function"
-    echo "$SOURCE_LINE"
+    echo "# tower-dashboard: shell alias for the launcher"
+    echo "alias unraid-dash='tower-dashboard'"
   } >> "$HOME/.bashrc"
-  echo "Appended unraid-dash source line to ~/.bashrc"
+  echo "Appended 'unraid-dash' alias to ~/.bashrc"
 else
-  echo "unraid-dash already sourced from ~/.bashrc — skipping"
+  echo "'unraid-dash' alias already in ~/.bashrc — skipping"
 fi
 
 # Refresh the XDG desktop database so launchers (walker, rofi, GNOME, KDE, …)
@@ -50,13 +50,12 @@ cat <<'EOF'
 
 Next steps:
   1. Append workstation/ssh-config.snippet to ~/.ssh/config and edit the host
-     line to point at your Unraid tower. SSH ControlMaster is a launch-speed
-     optimization, not strictly required.
-  2. Customize via env vars in your shell rc (all optional; defaults shown):
+     line to point at your Unraid box. Make sure the hostname resolves — if you
+     rely on mDNS (.local) and it's flaky, pin the box in /etc/hosts instead.
+  2. Install the tower side — see tower/README.md. The dashboard now runs as a
+     tmux session ON the box, so the box needs tmux (via the NerdTools plugin)
+     plus the tower-dash script and the btop/nvtop/ctop/fan-status tools.
+  3. Customize via env vars in your shell rc (optional; defaults shown):
        export TOWER_HOST=root@tower.local   # SSH target
-       export TOWER_SESSION=tower           # tmux session name
-       export TOWER_WINDOW=unraid           # tmux window name
        export TERMINAL=ghostty              # override terminal autodetect
-  3. Install the tower-side companion scripts on Unraid — see tower/README.md.
-  4. Open a new shell (or `source ~/.bashrc`) to pick up unraid-dash.
 EOF

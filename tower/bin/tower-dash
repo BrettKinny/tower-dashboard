@@ -1,0 +1,71 @@
+#!/bin/bash
+# tower-dash — server-side Unraid monitoring dashboard.
+#
+# Builds a detached tmux session ('dash') with a three-row live monitor layout
+# the first time it runs, then attaches to it. Later runs just re-attach — the
+# monitors stay warm on the box between launches (until the box reboots).
+#
+# Layout:  btop          top ~60%, full width
+#          nvtop | ctop  middle ~40%, 50/50 split
+#          fan-status    bottom 1-row strip, full width
+#
+# Usage:  tower-dash         build if needed, then attach   (default)
+#         tower-dash build   build the detached session only, don't attach
+#         tower-dash kill    tear the session down
+#
+# Workstation side: the `tower-dashboard` launcher spawns a terminal that runs
+#   ssh -t <host> 'TERM=xterm-256color exec tower-dash'
+#
+# Requires on the box: tmux (NerdTools plugin), btop, nvtop, ctop, fan-status.
+set -u
+
+SESSION=dash
+
+build() {
+  tmux has-session -t "$SESSION" 2>/dev/null && return 0
+
+  # Size the session to the caller's terminal so the layout is born at the
+  # right geometry. Building at tmux's detached 80x24 default and attaching
+  # larger rescales every pane proportionally — which is what historically
+  # turned the 1-row fan strip into a fat band.
+  local cols rows
+  cols=$(tput cols  2>/dev/null || echo 211); [[ $cols =~ ^[0-9]+$ ]] || cols=211
+  rows=$(tput lines 2>/dev/null || echo 51);  [[ $rows =~ ^[0-9]+$ ]] || rows=51
+
+  tmux new-session -d -s "$SESSION" -n unraid -x "$cols" -y "$rows"
+  tmux set-option -t "$SESSION" status off    # reclaim the row; single-window view
+  tmux set-option -t "$SESSION" mouse  on     # scroll / pane-select with the mouse
+
+  local btop nvtop ctop fans
+  btop=$(tmux list-panes -t "$SESSION" -F '#{pane_id}' | head -n1)
+  # Split the middle row off the bottom, carve the 1-row fan strip off *that*,
+  # then split the (shortened) middle row 50/50. Doing the strip before the
+  # column split keeps it full-width regardless of the nvtop|ctop divider.
+  nvtop=$(tmux split-window -v -l 40% -t "$btop"  -P -F '#{pane_id}')
+  fans=$( tmux split-window -v -l 1   -t "$nvtop" -P -F '#{pane_id}')
+  ctop=$( tmux split-window -h -l 50% -t "$nvtop" -P -F '#{pane_id}')
+
+  # Re-pin the fan strip to exactly 1 row on any resize, so attaching a
+  # differently-sized client later can't let it scale into a fat band.
+  tmux set-hook -t "$SESSION" window-resized "resize-pane -t $fans -y 1"
+
+  # Each monitor runs in a restart loop: if it crashes or gets quit it comes
+  # back in 2s, instead of leaving a dead shell behind (or, for the first
+  # pane, taking the whole session down with it).
+  tmux send-keys -t "$btop"  'while :; do btop --force-utf; sleep 2; done' C-m
+  tmux send-keys -t "$nvtop" 'while :; do nvtop; sleep 2; done' C-m
+  tmux send-keys -t "$ctop"  'while :; do CTOP_THEME=default-dark ctop -s cpu; sleep 2; done' C-m
+  # fan-status has no TUI of its own — loop it onto the 1-row strip directly.
+  # (watch(1) is avoided here: it exits when the terminal is only 1 row tall.)
+  tmux send-keys -t "$fans"  'while :; do printf "\033[H\033[2K%s" "$(fan-status --line)"; sleep 2; done' C-m
+
+  tmux select-pane -t "$btop"
+}
+
+case "${1:-attach}" in
+  attach) build; exec tmux attach -d -t "$SESSION" ;;
+  build)  build; echo "dash session built (detached)." ;;
+  kill)   tmux kill-session -t "$SESSION" 2>/dev/null \
+            && echo "dash session killed." || echo "no dash session running." ;;
+  *)      echo "usage: tower-dash [build|kill]" >&2; exit 1 ;;
+esac

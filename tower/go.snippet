@@ -8,8 +8,9 @@ modprobe nct6775
 # FanCtrlPlus sensor-ignore override (stops lm-sensors from re-reading fan tachs).
 cp -f /boot/config/sensors-ignore-fans.conf /etc/sensors.d/zz-ignore-fans.conf
 
-# tmux-256color terminfo so htop/nvtop/watch over SSH from tmux don't bail with
-# "ncurses: cannot initialize terminal type".
+# tmux itself is installed via the NerdTools plugin (it persists on its own and
+# is NOT restored here). This line restores the tmux-256color terminfo entry so
+# the monitors running inside tmux's panes can initialise their terminal type.
 mkdir -p /usr/share/terminfo/t && cp -f /boot/config/terminfo/t/tmux-256color /usr/share/terminfo/t/tmux-256color
 
 # Custom binaries + dashboard companion scripts.
@@ -17,6 +18,7 @@ cp -f /boot/config/bin/btop /usr/local/bin/btop && chmod +x /usr/local/bin/btop
 cp -f /boot/config/bin/array-status /usr/local/bin/array-status && chmod +x /usr/local/bin/array-status
 cp -f /boot/config/bin/fan-status /usr/local/bin/fan-status && chmod +x /usr/local/bin/fan-status
 cp -f /boot/config/bin/ctop /usr/local/bin/ctop && chmod +x /usr/local/bin/ctop
+cp -f /boot/config/bin/tower-dash /usr/local/bin/tower-dash && chmod +x /usr/local/bin/tower-dash
 
 # Config files (no chmod needed).
 mkdir -p /root/.config/btop && cp -f /boot/config/btop/btop.conf /root/.config/btop/btop.conf
